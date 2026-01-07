@@ -15,8 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -43,10 +42,10 @@ public class OrderServiceImpl implements OrderService {
         Station sTo = stationMapper.selectOne(new QueryWrapper<Station>().eq("code", req.to).last("limit 1"));
         
         if (sFrom == null) {
-            throw new RuntimeException("出发站不存在: " + req.from);
+            throw new BusinessException("出发站不存在: " + req.from);
         }
         if (sTo == null) {
-            throw new RuntimeException("到达站不存在: " + req.to);
+            throw new BusinessException("到达站不存在: " + req.to);
         }
 
         BigDecimal price;
@@ -71,8 +70,8 @@ public class OrderServiceImpl implements OrderService {
         o.setToStationId(sTo.getId());
         o.setPrice(price);
         o.setStatus(OrderStatus.CREATED);
-        o.setCreatedAt(Timestamp.from(Instant.now()));
-        o.setUpdatedAt(Timestamp.from(Instant.now()));
+        o.setCreatedAt(LocalDateTime.now());
+        o.setUpdatedAt(LocalDateTime.now());
         
         orderMapper.insert(o);
         return o;

@@ -2,99 +2,84 @@
   <div class="wrap">
     <div class="card">
       <div class="title">取票机扫码演示</div>
-      <div class="row">
-        <video id="video" autoplay playsinline class="video"></video>
-        <canvas id="canvas" class="canvas"></canvas>
+      
+      <QRScanner @scan="handleScan" ref="scannerRef" />
+
+      <div class="result-area">
+        <div class="result" v-if="decoded">
+          <div class="label">扫码内容：</div>
+          <div class="value">{{ decoded }}</div>
+        </div>
+        <div class="result" v-if="validate">
+          <div class="label">验证结果：</div>
+          <div class="value" :class="{ valid: validate.valid, invalid: !validate.valid }">
+            {{ validate.valid ? '有效' : '无效' }}
+            <span v-if="validate.reason">({{ validate.reason }})</span>
+          </div>
+        </div>
+        <div class="result" v-if="issue">
+          <div class="label">出票状态：</div>
+          <div class="value">{{ issue.issued ? '出票成功' : '出票失败' }}</div>
+        </div>
+        <div class="error" v-if="error">{{ error }}</div>
       </div>
-      <div class="actions">
-        <button class="btn" @click="start">启动摄像头</button>
-        <button class="btn" style="margin-left:8px" @click="stop">停止</button>
-      </div>
-      <div class="result" v-if="decoded">
-        <div>载荷：{{ decoded }}</div>
-      </div>
-      <div class="result" v-if="validate">
-        <div>验证：{{ validate.valid }}（{{ validate.reason }}）</div>
-      </div>
-      <div class="result" v-if="issue">
-        <div>出票：{{ issue.issued }}</div>
-      </div>
-      <div class="error" v-if="error">{{ error }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import {ref} from 'vue'
 import axios from 'axios'
-import jsQR from 'jsqr'
+import QRScanner from './components/QRScanner.vue'
 
 const api = axios.create({ baseURL: '/api' })
-const streamRef = ref(null)
+const scannerRef = ref(null)
+
 const decoded = ref('')
 const validate = ref(null)
 const issue = ref(null)
 const error = ref('')
-let raf = null
 
-async function start() {
-  error.value = ''
+async function handleScan(data) {
+  console.log('Scanned:', data)
+  decoded.value = data
   validate.value = null
   issue.value = null
-  decoded.value = ''
-  const video = document.getElementById('video')
-  const canvas = document.getElementById('canvas')
-  const ctx = canvas.getContext('2d')
+  error.value = ''
+  
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    streamRef.value = stream
-    video.srcObject = stream
-    await video.play()
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const tick = async () => {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const code = jsQR(imageData.data, imageData.width, imageData.height)
-      if (code && code.data) {
-        decoded.value = code.data
-        try {
-          const payload = JSON.parse(code.data)
-          const v = await api.post('/kiosk/validate', payload)
-          validate.value = v.data
-          if (v.data && v.data.valid) {
-            const res = await api.post('/tickets/issue', payload)
-            issue.value = res.data
-          }
-        } catch (e) {
-          error.value = '解析或验证失败'
-        }
-        cancelAnimationFrame(raf)
-        return
-      }
-      raf = requestAnimationFrame(tick)
+    let payload;
+    try {
+      payload = JSON.parse(data)
+    } catch (e) {
+      error.value = '二维码格式错误'
+      return
     }
-    raf = requestAnimationFrame(tick)
-  } catch (e) {
-    error.value = '摄像头不可用'
-  }
-}
 
-function stop() {
-  if (raf) cancelAnimationFrame(raf)
-  const s = streamRef.value
-  if (s) s.getTracks().forEach(t => t.stop())
+    const v = await api.post('/kiosk/validate', payload)
+    validate.value = v.data
+    
+    if (v.data && v.data.valid) {
+      const res = await api.post('/tickets/issue', payload)
+      issue.value = res.data
+    }
+  } catch (e) {
+    console.error(e)
+    error.value = '请求失败: ' + (e.response?.data?.message || e.message)
+  }
 }
 </script>
 
 <style>
-.wrap { max-width: 800px; margin: 24px auto; padding: 16px; }
-.card { background: #fff; border-radius: 8px; box-shadow: 0 1px 8px rgba(0,0,0,0.06); padding: 16px; }
-.title { font-weight: 600; margin-bottom: 12px; }
-.row { display: flex; gap: 12px; }
-.video, .canvas { width: 100%; max-width: 360px; background: #000; }
-.actions { margin-top: 12px; }
-.btn { padding: 8px 12px; border: none; border-radius: 6px; background: #409eff; color: #fff; cursor: pointer; }
-.result { margin-top: 8px; padding: 8px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 6px; }
-.error { color: #f56c6c; margin-top: 8px; }
+body { margin: 0; background: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+.wrap { max-width: 600px; margin: 24px auto; padding: 16px; }
+.card { background: #fff; border-radius: 8px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1); padding: 24px; }
+.title { font-weight: 600; font-size: 18px; margin-bottom: 24px; text-align: center; color: #303133; }
+.result-area { margin-top: 24px; border-top: 1px solid #ebeef5; padding-top: 16px; }
+.result { display: flex; margin-bottom: 12px; align-items: baseline; }
+.label { width: 80px; color: #909399; font-size: 14px; flex-shrink: 0; }
+.value { color: #303133; font-size: 14px; word-break: break-all; }
+.valid { color: #67c23a; font-weight: bold; }
+.invalid { color: #f56c6c; font-weight: bold; }
+.error { color: #f56c6c; margin-top: 12px; text-align: center; font-size: 14px; }
 </style>

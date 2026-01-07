@@ -2,6 +2,7 @@ package com.subway.ticket.web;
 
 import com.subway.ticket.domain.Order;
 import com.subway.ticket.domain.QrcodeToken;
+import com.subway.ticket.domain.enums.OrderStatus;
 import com.subway.ticket.repository.OrderMapper;
 import com.subway.ticket.repository.QrcodeTokenMapper;
 import com.subway.ticket.service.QrSignService;
@@ -11,8 +12,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @RestController
@@ -34,7 +36,8 @@ public class QrcodeController {
     public ResponseEntity<QrPayload> qrcode(@PathVariable("id") Long id) {
         Order o = orderMapper.selectById(id);
         if (o == null) return ResponseEntity.notFound().build();
-        if (!"PAID".equals(o.getStatus())) return ResponseEntity.badRequest().build();
+        if (OrderStatus.PAID != o.getStatus()) return ResponseEntity.badRequest().build();
+        
         String nonce = UUID.randomUUID().toString();
         long expEpoch = Instant.now().plusSeconds(15 * 60).getEpochSecond();
         String data = id + ":" + nonce + ":" + expEpoch;
@@ -43,10 +46,10 @@ public class QrcodeController {
         QrcodeToken t = new QrcodeToken();
         t.setOrderId(id);
         t.setNonce(nonce);
-        t.setExpiresAt(Timestamp.from(Instant.ofEpochSecond(expEpoch)));
+        t.setExpiresAt(LocalDateTime.ofInstant(Instant.ofEpochSecond(expEpoch), ZoneId.systemDefault()));
         t.setSignature(sign);
         t.setPayload(payloadJson);
-        t.setCreatedAt(Timestamp.from(Instant.now()));
+        t.setCreatedAt(LocalDateTime.now());
         qrcodeTokenMapper.insert(t);
         return ResponseEntity.ok(new QrPayload(id, nonce, expEpoch, sign));
     }

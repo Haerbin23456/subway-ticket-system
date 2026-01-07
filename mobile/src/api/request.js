@@ -1,4 +1,5 @@
 import axios from 'axios'
+import {ElMessage} from 'element-plus'
 
 const service = axios.create({
   baseURL: '/api',
@@ -8,8 +9,9 @@ const service = axios.create({
 service.interceptors.response.use(
   response => response,
   error => {
-    // 简单的错误处理，实际项目可以集成 Toast
     console.error('API Error:', error)
+    const msg = error.response?.data?.message || error.message || '请求失败'
+    ElMessage.error(msg)
     return Promise.reject(error)
   }
 )

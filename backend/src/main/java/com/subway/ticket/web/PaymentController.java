@@ -1,17 +1,18 @@
 package com.subway.ticket.web;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.subway.ticket.domain.Order;
 import com.subway.ticket.domain.Payment;
 import com.subway.ticket.domain.enums.OrderStatus;
 import com.subway.ticket.repository.OrderMapper;
 import com.subway.ticket.repository.PaymentMapper;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -32,9 +33,9 @@ public class PaymentController {
         p.setOrderId(o.getId());
         p.setAmount(o.getPrice() != null ? o.getPrice() : new BigDecimal("0"));
         p.setStatus("SUCCESS");
-        p.setPaidAt(Timestamp.from(Instant.now()));
+        p.setPaidAt(LocalDateTime.now());
         p.setChannel("MOCK");
-        p.setCreatedAt(Timestamp.from(Instant.now()));
+        p.setCreatedAt(LocalDateTime.now());
         paymentMapper.insert(p);
         o.setStatus(OrderStatus.PAID);
         orderMapper.updateById(o);

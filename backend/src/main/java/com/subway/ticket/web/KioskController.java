@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api")
@@ -62,10 +62,10 @@ public class KioskController {
         Ticket ticket = new Ticket();
         ticket.setOrderId(o.getId());
         ticket.setQrcodeTokenId(t.getId());
-        ticket.setIssuedAt(Timestamp.from(Instant.now()));
+        ticket.setIssuedAt(LocalDateTime.now());
         ticket.setStatus("DISPENSED");
-        ticket.setCreatedAt(Timestamp.from(Instant.now()));
-        ticket.setUpdatedAt(Timestamp.from(Instant.now()));
+        ticket.setCreatedAt(LocalDateTime.now());
+        ticket.setUpdatedAt(LocalDateTime.now());
         ticketMapper.insert(ticket);
         o.setStatus(OrderStatus.COMPLETED);
         orderMapper.updateById(o);

@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { onMounted, defineEmits, defineExpose } from 'vue'
+import {onMounted} from 'vue'
 
 const emit = defineEmits(['select'])
 let subwayInstance = null
