@@ -54,6 +54,11 @@ public class StationService {
                 .collect(Collectors.toList());
     }
 
+    public String getStationNameById(Long id) {
+        Station s = stationMapper.selectById(id);
+        return s != null ? s.getName() : "Unknown";
+    }
+
     private static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
         Map<Object, Boolean> seen = new ConcurrentHashMap<>();
         return t -> seen.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;

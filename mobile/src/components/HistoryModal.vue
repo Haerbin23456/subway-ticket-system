@@ -17,7 +17,9 @@
         >
           <div class="item-header">
             <span class="time">{{ formatTime(item.createdAt) }}</span>
-            <span class="status">已支付</span>
+            <span class="status" :class="{ completed: item.status === 'COMPLETED' }">
+              {{ item.status === 'COMPLETED' ? '已出票' : '已支付' }}
+            </span>
           </div>
           <div class="route">
             <span class="station">{{ item.fromName }}</span>
@@ -106,6 +108,7 @@ function formatTime(isoStr) {
 }
 .time { color: #999; }
 .status { color: #07c160; font-weight: 500; }
+.status.completed { color: #909399; }
 
 .route {
   display: flex; align-items: center;

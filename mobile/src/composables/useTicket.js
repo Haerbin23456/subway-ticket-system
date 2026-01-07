@@ -50,6 +50,14 @@ export function useTicket() {
     }
     localStorage.setItem('subway_orders', JSON.stringify(history.value))
   }
+  
+  function updateHistoryStatus(orderId, status) {
+    const idx = history.value.findIndex(i => i.id === orderId)
+    if (idx !== -1) {
+      history.value[idx].status = status
+      localStorage.setItem('subway_orders', JSON.stringify(history.value))
+    }
+  }
 
   /**
    * 处理站点选择逻辑
@@ -163,13 +171,16 @@ export function useTicket() {
         // Restore display info for modal
         fromName.value = item.fromName
         toName.value = item.toName
-        // If we want to show price in modal, we might need to ensure quote/order is set or pass it directly.
-        // TicketModal uses quote?.price, so let's mock a quote object or update TicketModal to accept props more flexibly.
-        // Easier: update quote ref
         quote.value = { price: item.price }
         
         return true
       } catch (e) {
+        if (e.response?.data?.code === 'ORDER_COMPLETED') {
+           // Order is completed, update local status
+           updateHistoryStatus(item.id, 'COMPLETED')
+           error.value = '该车票已取出'
+           return false
+        }
         error.value = '无法获取二维码，可能订单已过期'
         return false
       } finally {

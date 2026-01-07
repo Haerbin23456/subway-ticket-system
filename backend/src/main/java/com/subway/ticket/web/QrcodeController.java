@@ -33,9 +33,14 @@ public class QrcodeController {
     }
 
     @GetMapping("/orders/{id}/qrcode")
-    public ResponseEntity<QrPayload> qrcode(@PathVariable("id") Long id) {
+    public ResponseEntity<?> qrcode(@PathVariable("id") Long id) {
         Order o = orderMapper.selectById(id);
         if (o == null) return ResponseEntity.notFound().build();
+        
+        if (OrderStatus.COMPLETED == o.getStatus()) {
+             return ResponseEntity.status(409).body(new ErrorResp("ORDER_COMPLETED", "订单已出票"));
+        }
+        
         if (OrderStatus.PAID != o.getStatus()) return ResponseEntity.badRequest().build();
         
         String nonce = UUID.randomUUID().toString();
@@ -52,6 +57,12 @@ public class QrcodeController {
         t.setCreatedAt(LocalDateTime.now());
         qrcodeTokenMapper.insert(t);
         return ResponseEntity.ok(new QrPayload(id, nonce, expEpoch, sign));
+    }
+    
+    public static class ErrorResp {
+        public String code;
+        public String message;
+        public ErrorResp(String code, String message) { this.code = code; this.message = message; }
     }
 
     public static class QrPayload {
