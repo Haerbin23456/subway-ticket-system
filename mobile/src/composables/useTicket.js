@@ -109,7 +109,9 @@ export function useTicket() {
       error.value = ''
       return true
     } catch (e) {
-      const msg = e.response?.data?.message || e.message || '计算失败'
+      const resData = e.response?.data
+      // Try to get message, or fallback to mode (e.g. STATION_NOT_FOUND)
+      const msg = resData?.message || resData?.mode || e.message || '计算失败'
       error.value = msg
       quote.value = null
       return false

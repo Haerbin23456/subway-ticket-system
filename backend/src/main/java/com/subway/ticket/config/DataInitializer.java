@@ -144,6 +144,9 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             System.out.println("Data import completed successfully.");
+            System.out.println("Total Lines: " + lineMapper.selectCount(null));
+            System.out.println("Total Stations: " + stationMapper.selectCount(null));
+            System.out.println("Total LineStations: " + lineStationMapper.selectCount(null));
             
         } catch (Exception e) {
             e.printStackTrace();
