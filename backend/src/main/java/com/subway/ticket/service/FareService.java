@@ -1,6 +1,7 @@
 package com.subway.ticket.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.subway.ticket.config.FareProperties;
 import com.subway.ticket.domain.Line;
 import com.subway.ticket.domain.Station;
 import com.subway.ticket.dto.FareQuote;
@@ -18,10 +19,12 @@ public class FareService {
 
     private final GraphService graphService;
     private final StationMapper stationMapper;
+    private final FareProperties fareProperties;
 
-    public FareService(GraphService graphService, StationMapper stationMapper) {
+    public FareService(GraphService graphService, StationMapper stationMapper, FareProperties fareProperties) {
         this.graphService = graphService;
         this.stationMapper = stationMapper;
+        this.fareProperties = fareProperties;
     }
 
     public FareQuote calculateFare(String fromCode, String toCode) {
@@ -64,15 +67,25 @@ public class FareService {
     }
 
     private BigDecimal calculatePrice(int distance) {
-        if (distance <= 2) return new BigDecimal("2.00");
-        if (distance <= 4) return new BigDecimal("3.00");
-        if (distance <= 7) return new BigDecimal("4.00");
-        if (distance <= 12) return new BigDecimal("5.00");
-        if (distance <= 16) return new BigDecimal("6.00");
-        
-        int extra = distance - 16;
-        int steps = (int) Math.ceil((double) extra / 4);
-        return new BigDecimal("6.00").add(new BigDecimal("1.00").multiply(new BigDecimal(steps)));
+        // 1. Check configured rules
+        if (fareProperties.getRules() != null) {
+            for (FareProperties.Rule rule : fareProperties.getRules()) {
+                if (distance <= rule.getDistance()) {
+                    return rule.getPrice();
+                }
+            }
+        }
+
+        // 2. Check extra distance rule
+        FareProperties.ExtraRule extra = fareProperties.getExtra();
+        if (extra != null && distance > extra.getStartDistance()) {
+            int extraDist = distance - extra.getStartDistance();
+            int steps = (int) Math.ceil((double) extraDist / extra.getInterval());
+            return extra.getBasePriceForExtra().add(extra.getPricePerInterval().multiply(new BigDecimal(steps)));
+        }
+
+        // Fallback
+        return fareProperties.getBasePrice() != null ? fareProperties.getBasePrice() : BigDecimal.ZERO;
     }
 
     private List<RouteStep> buildRouteSteps(List<Long> pathIds) {

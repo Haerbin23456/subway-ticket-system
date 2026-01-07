@@ -21,6 +21,19 @@ public class StationService {
         this.stationMapper = stationMapper;
     }
 
+    public List<Station> getStationsByLine(Long lineId) {
+        return stationMapper.selectList(new QueryWrapper<Station>()
+                .eq("line_id", lineId)
+                .eq("is_active", 1)
+                .orderByAsc("id"));
+    }
+
+    public List<Station> getAllStations() {
+        return stationMapper.selectList(new QueryWrapper<Station>()
+                .eq("is_active", 1)
+                .orderByAsc("id"));
+    }
+
     public List<Station> searchStations(String keyword) {
         QueryWrapper<Station> query = new QueryWrapper<>();
         query.eq("is_active", 1);

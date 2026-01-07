@@ -15,3 +15,24 @@ management:
   endpoint:
     health:
       show-details: never
+
+subway:
+  fare:
+    base-price: 2.00
+    base-distance: 2
+    rules:
+      - distance: 2
+        price: 2.00
+      - distance: 4
+        price: 3.00
+      - distance: 7
+        price: 4.00
+      - distance: 12
+        price: 5.00
+      - distance: 16
+        price: 6.00
+    extra:
+      start-distance: 16
+      interval: 4
+      price-per-interval: 1.00
+      base-price-for-extra: 6.00

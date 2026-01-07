@@ -35,6 +35,7 @@
 
 <script setup>
 import {nextTick, ref, watch} from 'vue'
+import {searchStations} from '../api/station'
 
 const props = defineProps({
   show: Boolean
@@ -71,14 +72,8 @@ function onInput() {
 async function fetchStations(kw) {
   loading.value = true
   try {
-    const url = kw.trim() 
-      ? `/api/stations/search?keyword=${encodeURIComponent(kw)}`
-      : `/api/stations/search` // Call search without keyword to get default list
-      
-    const res = await fetch(url)
-    if (res.ok) {
-      results.value = await res.json()
-    }
+    const res = await searchStations(kw)
+    results.value = res.data
   } catch (e) {
     console.error(e)
     results.value = []
