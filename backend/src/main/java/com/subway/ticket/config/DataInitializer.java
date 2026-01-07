@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,18 +46,18 @@ public class DataInitializer implements CommandLineRunner {
         // FIX: Ensure column size is enough
         // Removed runtime ALTER TABLE. Schema should be correct in schema.sql.
 
-        // Changed to Hangzhou Subway JSON
-        String jsonPath = "c:\\src\\subway-ticket-system\\backend\\src\\main\\resources\\hangzhou_subway.json";
-        File file = new File(jsonPath);
-        if (!file.exists()) {
-            System.out.println("JSON file not found at " + jsonPath + ". Skipping import.");
-            return;
-        }
+            // Load from classpath
+            String jsonFile = "hangzhou_subway.json";
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.ClassPathResource(jsonFile);
+            if (!resource.exists()) {
+                System.out.println("JSON file not found in classpath: " + jsonFile + ". Skipping import.");
+                return;
+            }
 
-        try {
-            System.out.println("Starting data import from " + jsonPath);
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(file);
+            try {
+                System.out.println("Starting data import from classpath: " + jsonFile);
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode root = mapper.readTree(resource.getInputStream());
             // Hangzhou JSON structure: root -> "l" (array of lines)
             JsonNode linesNode = root.path("l");
 
