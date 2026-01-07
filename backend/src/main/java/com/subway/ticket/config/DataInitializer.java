@@ -48,12 +48,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         // FIX: Ensure column size is enough
-        try {
-            jdbcTemplate.execute("ALTER TABLE station MODIFY COLUMN code VARCHAR(100)");
-            jdbcTemplate.execute("ALTER TABLE line MODIFY COLUMN code VARCHAR(100)");
-        } catch (Exception e) {
-            System.out.println("Schema update warning: " + e.getMessage());
-        }
+        // Removed runtime ALTER TABLE. Schema should be correct in schema.sql.
 
         // Changed to Hangzhou Subway JSON
         String jsonPath = "c:\\src\\subway-ticket-system\\backend\\src\\main\\resources\\hangzhou_subway.json";

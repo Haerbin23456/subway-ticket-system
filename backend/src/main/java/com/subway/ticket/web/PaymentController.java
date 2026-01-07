@@ -3,6 +3,7 @@ package com.subway.ticket.web;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.subway.ticket.domain.Order;
 import com.subway.ticket.domain.Payment;
+import com.subway.ticket.domain.enums.OrderStatus;
 import com.subway.ticket.repository.OrderMapper;
 import com.subway.ticket.repository.PaymentMapper;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +36,7 @@ public class PaymentController {
         p.setChannel("MOCK");
         p.setCreatedAt(Timestamp.from(Instant.now()));
         paymentMapper.insert(p);
-        o.setStatus("PAID");
+        o.setStatus(OrderStatus.PAID);
         orderMapper.updateById(o);
         return ResponseEntity.ok(p);
     }

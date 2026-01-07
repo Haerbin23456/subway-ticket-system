@@ -22,6 +22,19 @@
    ```
 2. 确保 root 密码为 `123456`（如果不是，请修改 `backend/src/main/resources/application-db.yml`，把密码改成你自己的 root 密码）。
 
+### 3. 运行项目
+
+#### 方案 A：IDEA 一键运行（首选 / Preferred）
+本项目包含预置的 IntelliJ IDEA 运行配置 (`.idea/runConfigurations`)，无需手动输入命令。
+
+1. **Backend**: 在顶部运行配置下拉框选择 `Backend`，点击运行 ▶。
+2. **Mobile**: 选择 `Mobile` 并运行。启动后访问 `http://localhost:5173`。
+3. **Kiosk**: 选择 `Kiosk` 并运行。启动后访问 `http://localhost:5174`。
+
+> **提示**: 前端项目已配置为监听 `0.0.0.0`，因此你也可以使用局域网 IP (如 `http://192.168.x.x:5173`) 在真实手机上访问。
+
+#### 方案 B：命令行运行 (Command Line)
+
 ### 3. 启动后端 (Backend)
 打开一个终端 (Terminal 1)，运行：
 ```powershell
@@ -43,7 +56,7 @@ npm run dev
 直接在电脑浏览器打开就行
 其实没适配手机尺寸
 
-### 5. 启动自助机端 (Kiosk Web)
+### 3.3 启动自助机端 (Kiosk Web)
 打开第三个终端 (Terminal 3)，运行：
 ```powershell
 cd kiosk

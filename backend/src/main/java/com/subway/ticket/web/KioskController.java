@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.subway.ticket.domain.Order;
 import com.subway.ticket.domain.QrcodeToken;
 import com.subway.ticket.domain.Ticket;
+import com.subway.ticket.domain.enums.OrderStatus;
 import com.subway.ticket.repository.OrderMapper;
 import com.subway.ticket.repository.QrcodeTokenMapper;
 import com.subway.ticket.repository.TicketMapper;
@@ -45,7 +46,7 @@ public class KioskController {
         }
         Order o = orderMapper.selectById(qr.orderId);
         if (o == null) return ResponseEntity.ok(new ValidateResp(false, "ORDER_NOT_FOUND"));
-        if (!"PAID".equals(o.getStatus())) return ResponseEntity.ok(new ValidateResp(false, "ORDER_NOT_PAID"));
+        if (OrderStatus.PAID != o.getStatus()) return ResponseEntity.ok(new ValidateResp(false, "ORDER_NOT_PAID"));
         QrcodeToken t = qrcodeTokenMapper.selectOne(new QueryWrapper<QrcodeToken>().eq("order_id", qr.orderId).eq("nonce", qr.nonce).eq("signature", qr.sign).last("limit 1"));
         if (t == null) return ResponseEntity.ok(new ValidateResp(false, "TOKEN_NOT_FOUND"));
         return ResponseEntity.ok(new ValidateResp(true, "OK"));
@@ -55,7 +56,7 @@ public class KioskController {
     public ResponseEntity<IssueResp> issue(@RequestBody QrPayload qr) {
         Order o = orderMapper.selectById(qr.orderId);
         if (o == null) return ResponseEntity.badRequest().build();
-        if ("ISSUED".equals(o.getStatus())) return ResponseEntity.ok(new IssueResp(true));
+        if (OrderStatus.COMPLETED == o.getStatus()) return ResponseEntity.ok(new IssueResp(true));
         QrcodeToken t = qrcodeTokenMapper.selectOne(new QueryWrapper<QrcodeToken>().eq("order_id", qr.orderId).eq("nonce", qr.nonce).last("limit 1"));
         if (t == null) return ResponseEntity.badRequest().build();
         Ticket ticket = new Ticket();
@@ -66,7 +67,7 @@ public class KioskController {
         ticket.setCreatedAt(Timestamp.from(Instant.now()));
         ticket.setUpdatedAt(Timestamp.from(Instant.now()));
         ticketMapper.insert(ticket);
-        o.setStatus("ISSUED");
+        o.setStatus(OrderStatus.COMPLETED);
         orderMapper.updateById(o);
         return ResponseEntity.ok(new IssueResp(true));
     }
