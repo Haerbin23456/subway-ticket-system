@@ -49,21 +49,24 @@ defineEmits(['close'])
 }
 
 .qr-modal {
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   width: 80%;
   max-width: 320px;
   border-radius: 16px;
   padding: 24px;
   text-align: center;
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   animation: slideUp 0.3s;
 }
 
 .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #333; }
-.qr-container { background: #f8f9fa; padding: 16px; border-radius: 12px; margin-bottom: 16px; display: inline-block; }
+.qr-container { background: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 .qr-container img { width: 180px; height: 180px; display: block; }
 
-.ticket-info { text-align: left; margin-bottom: 20px; border-top: 1px dashed #eee; padding-top: 16px; }
+.ticket-info { text-align: left; margin-bottom: 20px; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 16px; }
 .info-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
 .info-item .label { color: #999; }
 .info-item .val { font-weight: 500; color: #333; }

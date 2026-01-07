@@ -1,13 +1,12 @@
 package com.subway.ticket.config;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.subway.ticket.domain.Line;
 import com.subway.ticket.domain.LineStation;
 import com.subway.ticket.domain.Station;
 import com.subway.ticket.repository.*;
-import com.subway.ticket.web.FareController;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,12 +27,11 @@ public class DataInitializer implements CommandLineRunner {
     private final TicketMapper ticketMapper;
     private final PaymentMapper paymentMapper;
     private final QrcodeTokenMapper qrcodeTokenMapper;
-    private final FareController fareController;
     private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(LineMapper lineMapper, StationMapper stationMapper, LineStationMapper lineStationMapper,
                            OrderMapper orderMapper, TicketMapper ticketMapper, PaymentMapper paymentMapper, 
-                           QrcodeTokenMapper qrcodeTokenMapper, FareController fareController, JdbcTemplate jdbcTemplate) {
+                           QrcodeTokenMapper qrcodeTokenMapper, JdbcTemplate jdbcTemplate) {
         this.lineMapper = lineMapper;
         this.stationMapper = stationMapper;
         this.lineStationMapper = lineStationMapper;
@@ -41,7 +39,6 @@ public class DataInitializer implements CommandLineRunner {
         this.ticketMapper = ticketMapper;
         this.paymentMapper = paymentMapper;
         this.qrcodeTokenMapper = qrcodeTokenMapper;
-        this.fareController = fareController;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -79,8 +76,6 @@ public class DataInitializer implements CommandLineRunner {
             lineStationMapper.delete(null);
             stationMapper.delete(null);
             lineMapper.delete(null);
-
-            List<Map.Entry<String, String>> physicalEdges = new ArrayList<>();
 
             // Process each Line
             for (JsonNode lineNode : linesNode) {
@@ -144,10 +139,6 @@ public class DataInitializer implements CommandLineRunner {
                         ls.setSeq(seq++);
                         lineStationMapper.insert(ls);
 
-                        // Build Physical Edge (based on sequence in JSON)
-                        if (prevStationCode != null) {
-                            physicalEdges.add(new AbstractMap.SimpleEntry<>(prevStationCode, stId));
-                        }
                         prevStationCode = stId;
                     }
                 }
@@ -155,9 +146,6 @@ public class DataInitializer implements CommandLineRunner {
 
             System.out.println("Data import completed successfully.");
             
-            // Inject physical edges to FareController
-            fareController.setPhysicalEdges(physicalEdges);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -202,7 +190,7 @@ public class DataInitializer implements CommandLineRunner {
         String startNode;
         if (!endpoints.isEmpty()) {
             // Pick the first endpoint as start
-            startNode = endpoints.get(0);
+            startNode = endpoints.getFirst();
         } else {
             // No endpoints? It might be a circle (Degree usually 2). Pick any node.
             startNode = allNodes.iterator().next();

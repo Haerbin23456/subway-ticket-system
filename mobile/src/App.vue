@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <SubwayMap ref="mapRef" @select="handleSelect" />
+    <SubwayMap ref="mapRef" @select="onStationSelect" />
     
     <FarePanel 
       :fromName="fromName" 
@@ -8,7 +8,11 @@
       :loading="loading" 
       :quote="quote" 
       :error="error"
+      :activeMode="selectionMode"
       @order="orderAndPay"
+      @switch-mode="setSelectionMode"
+      @calculate="onCalculate"
+      @open-search="onOpenSearch"
     />
 
     <TicketModal 
@@ -17,88 +21,86 @@
       :fromName="fromName" 
       :toName="toName" 
       :price="quote?.price ? String(quote.price) : ''"
-      @close="qr = null"
+      @close="closeQr"
+    />
+    
+    <StationSearchModal 
+      :show="showSearch"
+      @close="showSearch = false"
+      @select="onSearchResultSelect"
     />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import {ref} from 'vue'
 import SubwayMap from './components/SubwayMap.vue'
 import FarePanel from './components/FarePanel.vue'
 import TicketModal from './components/TicketModal.vue'
-import { quoteFare, createOrder, mockPay, getQrCode } from './api/ticket'
+import StationSearchModal from './components/StationSearchModal.vue'
+import {useTicket} from './composables/useTicket'
 
 const mapRef = ref(null)
+const showSearch = ref(false)
 
-const fromCode = ref('')
-const toCode = ref('')
-const fromName = ref('')
-const toName = ref('')
+const {
+  fromCode, toCode, fromName, toName, selectionMode,
+  quote, error, loading, qr, qrImg,
+  setSelectionMode, handleStationSelect, fetchQuote, orderAndPay, closeQr
+} = useTicket()
 
-const quote = ref(null)
-const error = ref('')
-const loading = ref(false)
-const order = ref(null)
-const qr = ref(null)
-const qrImg = ref('')
-
-function handleSelect({ id, name }) {
-  if (!fromCode.value || (fromCode.value && toCode.value)) {
-    // New selection start
-    fromCode.value = id
-    fromName.value = name
-    toCode.value = ''
-    toName.value = ''
-    quote.value = null
-    qr.value = null
-    error.value = ''
-    
+function onStationSelect({ id, name }) {
+  // Pass the CURRENT selectionMode before it might get updated inside handleStationSelect?
+  // Actually handleStationSelect updates the state (fromName/toName).
+  // We need to know WHICH mode was active to set the marker correctly.
+  const currentMode = selectionMode.value;
+  
+  const { shouldClearRoute } = handleStationSelect(id, name)
+  
+  if (shouldClearRoute) {
     mapRef.value.clearRoute()
-  } else {
-    // Set end
-    toCode.value = id
-    toName.value = name
-    fetchQuote()
+  }
+  
+  // Set Start/End marker on map visually
+  if (mapRef.value) {
+    if (currentMode === 'from') {
+      mapRef.value.setStart(name);
+    } else if (currentMode === 'to') {
+      mapRef.value.setEnd(name);
+    }
   }
 }
 
-async function fetchQuote() {
-  if (!fromCode.value || !toCode.value) return
-  loading.value = true
-  try {
-    const res = await quoteFare(fromCode.value, toCode.value)
-    quote.value = res.data
-    error.value = ''
-    mapRef.value.showRoute(fromCode.value, toCode.value)
-  } catch (e) {
-    const msg = e.response?.data?.message || e.message || '计算失败'
-    error.value = msg
-    quote.value = null
-  } finally {
-    loading.value = false
+function onOpenSearch() {
+  showSearch.value = true
+}
+
+function onSearchResultSelect(station) {
+  // station: { id, name, code, ... }
+  
+  // 1. Update selection state
+  // IMPORTANT: Use station.code instead of station.id!
+  // The backend FareService expects the 'code' field (e.g. "3301..."), not the DB primary key 'id' (e.g. 15).
+  // The map API also uses 'code' as its ID.
+  onStationSelect({ id: station.code, name: station.name })
+  
+  // 2. Center map on the selected station
+  if (mapRef.value) {
+    mapRef.value.centerStation(station.name)
   }
 }
 
-async function orderAndPay() {
-  if (!fromCode.value || !toCode.value) return
-  loading.value = true
-  try {
-    const createRes = await createOrder({ from: fromCode.value, to: toCode.value })
-    order.value = createRes.data
-    
-    await mockPay(order.value.id)
-    
-    const qrRes = await getQrCode(order.value.id)
-    qr.value = qrRes.data
-    
-    const QRCode = (await import('qrcode')).default
-    qrImg.value = await QRCode.toDataURL(JSON.stringify(qr.value))
-    error.value = ''
-  } catch (e) {
-    error.value = e.response?.data?.message || '下单失败'
-  } finally {
-    loading.value = false
+async function onCalculate() {
+  const success = await fetchQuote()
+  if (success) {
+    // Pass NAMES to showRoute because the map API works best with names for visualization?
+    // Actually earlier we passed fromCode/toCode. 
+    // If the map API supports names, names are safer if codes are internal.
+    // But let's stick to what likely works. 
+    // If setStart(name) works, then route(name, name) should work too.
+    // And fromCode is the Code.
+    // Let's change to use Names for map route to be consistent with setStart/setEnd(name).
+    mapRef.value.showRoute(fromName.value, toName.value)
   }
 }
 </script>

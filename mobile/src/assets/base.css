@@ -1,0 +1,50 @@
+/* Global Button Styles */
+.btn {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.2s;
+  font-family: inherit;
+}
+
+.btn:active {
+  opacity: 0.8;
+}
+
+.btn-primary {
+  background: #409eff;
+  color: white;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+.btn-block {
+  width: 100%;
+  padding: 12px 0;
+  font-size: 16px;
+}
+
+/* Common Layout Utilities */
+.loading-tips {
+  text-align: center;
+  color: #409eff;
+  padding: 10px;
+}
+
+.error-msg {
+  color: #f56c6c;
+  text-align: center;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.no-result {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+}
