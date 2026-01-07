@@ -1,0 +1,20 @@
+{
+  "name": "kiosk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "jsqr": "^1.4.0",
+    "vue": "^3.5.11"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8",
+    "@vitejs/plugin-vue": "^5.0.4"
+  }
+}

@@ -1,0 +1,1101 @@
+.\PROJECT_STATUS.md
+---
+# 地铁网络自助取票系统 — 项目现状说明（给组员）
+
+## 项目目标与演示范围
+- 背景：缓解地铁购票机高峰期排队慢的问题。
+- 方案：手机端提前选站购票拿二维码；到站自助机扫码验证后出票。
+- 当前演示范围：已实现“查线路/查站点/票价试算”的后端接口与手机端极简页面。
+
+## 架构概览
+- 后端：Java 21 + Spring Boot 3.3 + MyBatis-Plus + MySQL 8.0，REST API。
+- 手机端：Vite + Vue 3，调用后端接口，展示线路与站点，支持票价试算。
+- 取票机端：后续实现（摄像头取流 + jsQR 二维码识别 + 后端验证）。
+
+## 当前功能与接口
+- 健康检查：`GET /api/health`
+  - 位置：backend/src/main/java/com/subway/ticket/web/HealthController.java:9
+- 线路列表：`GET /api/lines`
+  - 位置：backend/src/main/java/com/subway/ticket/web/LineController.java:13
+- 站点列表：`GET /api/stations?lineId=1`，全部站点：`GET /api/stations/all`
+  - 位置：backend/src/main/java/com/subway/ticket/web/StationController.java:23
+- 票价试算：`GET /api/fares/quote?from=L1-A&to=L1-D`
+  - 位置：backend/src/main/java/com/subway/ticket/web/FareController.java:28
+  - 规则：
+    - 同线：段数 = 两站在线内序号差；价格 = 2.00 + 0.50 × 段数；返回 `mode=SAME_LINE`。
+    - 跨线：当前简化返回演示价 4.00；返回 `mode=DIFF_LINE_SIMPLIFIED`。
+- 全局异常处理（统一返回 JSON 错误体，避免白标页）：
+  - 位置：backend/src/main/java/com/subway/ticket/web/GlobalExceptionHandler.java:6
+- Swagger UI（已接入，便于自测接口）：`http://localhost:8080/swagger-ui/index.html`
+
+## 数据模型简述
+- 表结构脚本：`db/schema.sql`
+- 关键表：
+  - `line`：线路（`name, color, code, is_active`）
+  - `station`：站点（`name, line_id, code, is_active`）
+  - `line_station`：线的有序站点（`seq` 用于计算段数）
+  - 后续会用到（已建表）：`orders, payment, qrcode_token, ticket`
+- 开发期示例数据（首启会自动插入）：
+  - 线路：`L1`（1号线）、`L2`（2号线）
+  - 站点：`L1-A/B/C/D`（序号 1-4）、`L2-E/F/G`（序号 1-3）
+  - 位置：backend/src/main/java/com/subway/ticket/config/DataInitializer.java:28
+
+## 手机端页面说明
+- 入口：`mobile/index.html`；应用：`mobile/src/App.vue`
+- 页面逻辑：
+  - 加载线路（`GET /api/lines`），选择线路后加载站点（`GET /api/stations?lineId=`）。
+  - 选择起点/终点，点击“试算票价”，调用 `GET /api/fares/quote` 并展示结果。
+  - 请求失败时在页面底部显示错误文本。
+- 代理配置：前端的 `/api` 代理到后端 `http://localhost:8080`（mobile/vite.config.js）。
+
+## 启动与验证速览（详见 README）
+- 数据库：创建 `subway_ticket_system`，导入 `db/schema.sql`。
+- 后端：激活 `db` Profile 和数据源环境变量后运行 `mvn -f backend/pom.xml spring-boot:run`。
+- 前端：`cd mobile && npm i && npm run dev`，访问 `http://localhost:5173`。
+- 验证接口与页面：健康检查、线路/站点、票价试算。
+
+## 下一步迭代计划（可演示级）
+- 后端：
+  - `POST /api/orders`：创建订单（起止站、价格、状态 `CREATED`）。
+  - `POST /api/payments/mock`：模拟支付（状态 `PENDING → SUCCESS`）。
+  - `GET /api/orders/{id}/qrcode`：返回二维码载荷（`orderId, nonce, exp, sign`）。
+  - `POST /api/kiosk/validate`、`POST /api/tickets/issue`：验证并出票（幂等）。
+- 手机端：
+  - 支付成功页：二维码展示（`qrcode.js`）。
+- 取票机端：
+  - 摄像头取流 + `jsQR` 识别二维码，调用后端验证与出票。
+
+## 常见问题与排查
+- 端口冲突：调整后端 `server.port`（application.yml）或前端端口（vite.config.js）。
+- 白标 500：查看后端日志；已启用全局异常处理返回 JSON 错误体。
+- 数据为空：重启后端（`db` Profile）自动插入示例数据；或手动插入站点与序号。
+- 前端依赖解析：当前页面不依赖 UI 库（Element Plus），只用原生控件，避免包入口兼容问题。
+
+## 文件导航与代码位置
+- 后端启动与 Mapper 扫描：backend/src/main/java/com/subway/ticket/Application.java:1
+- 健康检查：backend/src/main/java/com/subway/ticket/web/HealthController.java:9
+- 线路接口：backend/src/main/java/com/subway/ticket/web/LineController.java:13
+- 站点接口：backend/src/main/java/com/subway/ticket/web/StationController.java:23
+- 票价试算：backend/src/main/java/com/subway/ticket/web/FareController.java:28
+- 全局异常：backend/src/main/java/com/subway/ticket/web/GlobalExceptionHandler.java:6
+- 开发期数据：backend/src/main/java/com/subway/ticket/config/DataInitializer.java:28
+- 手机端页面逻辑：mobile/src/App.vue:83
+- 前端代理：mobile/vite.config.js:1
+
+---
+建议汇报结构：痛点与目标 → 已打通的接口与页面演示 → 票价规则说明 → 下一步计划（下单/支付/二维码/扫码出票）。
+
+
+---
+.\README.md
+---
+# 地铁网络自助取票系统 — 本地启动指南
+
+## 环境要求
+- Java 17+（推荐 21）
+- Maven 3.8+
+- Node.js 18+（推荐 22）与 npm 8+
+- MySQL 8.0（本地安装并可命令行访问）
+- Windows/macOS/Linux 皆可（以下以 Windows PowerShell 举例）
+
+## 环境检测（先跑一遍确认版本）
+- 在 PowerShell 终端执行：
+
+```
+java -version
+mvn -v
+node -v
+npm -v
+mysql --version
+git --version
+```
+
+- 期望：
+  - Java 显示 `17` 或以上（示例：`openjdk 21 LTS`）
+  - Maven 显示 `3.8+`（示例：`Apache Maven 3.9.x`）
+  - Node 显示 `18+`（示例：`v22.x`）
+  - npm 显示 `8+`（示例：`10.x`）
+  - MySQL 显示 `8.0.x`；若提示 `mysql: The term 'mysql' is not recognized`，请将 MySQL 安装目录的 `bin`（如 `C:\Program Files\MySQL\MySQL Server 8.0\bin`）加入系统 `PATH`，或用完整路径执行
+  - Git 显示版本（示例：`git version 2.x`）
+
+## 目录结构
+- `backend/`：后端 Spring Boot 项目
+- `mobile/`：手机端前端（Vite + Vue）
+- `db/schema.sql`：数据库表结构初始化脚本
+
+## 一次性初始化（每台电脑做一次）
+1) 创建数据库并导入表结构
+- 打开 PowerShell 终端，执行：
+```
+mysql -u root -p
+```
+- 输入密码
+- 在 `mysql>` 提示符中执行（替换 `<你的解压路径>` 为实际路径）：
+```
+CREATE DATABASE subway_ticket_system CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE subway_ticket_system;
+SOURCE <你的解压路径>\db\schema.sql;
+```
+
+2) 准备后端依赖（首次需要）
+```
+cd <你的解压路径>
+mvn -q -f backend\pom.xml -DskipTests package
+```
+
+## 启动后端（由终端专门运行）
+- 在 PowerShell 逐行执行（替换 `<你的本地 MySQL root 密码>` 为实际密码）：
+```
+cd <你的解压路径>
+$env:SPRING_PROFILES_ACTIVE = "db"
+$env:SPRING_DATASOURCE_URL = "jdbc:mysql://localhost:3306/subway_ticket_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+$env:SPRING_DATASOURCE_USERNAME = "root"
+$env:SPRING_DATASOURCE_PASSWORD = "<你的本地 MySQL root 密码>"
+mvn -f backend\pom.xml spring-boot:run
+```
+- 看到日志中 `Tomcat started on port 8080` 表示启动成功
+- 首次启动将自动插入示例数据（1号线/2号线及站点）
+
+### 后端接口验证（用 Postman 或浏览器访问）
+- 健康检查：
+```
+http://localhost:8080/api/health
+```
+- 线路列表：
+```
+http://localhost:8080/api/lines
+```
+- 站点列表（示例）：
+```
+http://localhost:8080/api/stations?lineId=1
+```
+- 票价试算（示例）：
+```
+http://localhost:8080/api/fares/quote?from=L1-A&to=L1-D
+```
+- Swagger UI（接口文档）：
+```
+http://localhost:8080/swagger-ui/index.html
+```
+
+## 启动手机端（前端）
+- 在另一个终端执行：
+```
+cd <你的解压路径>
+cd mobile
+npm i
+npm run dev
+```
+- 打开浏览器访问：
+```
+http://localhost:5173
+```
+- 页面操作：选择线路 → 选择起点/终点 → 点击“试算票价”
+
+## 演示脚本（课堂 3 分钟）
+- 背景：高峰期购票慢；手机端先买票拿凭证，到站自助机扫码出票
+- 展示：
+  - 后端健康检查与线路/站点接口返回
+  - 前端页面选站并试算票价（同线：价格=2.00+0.50×段数；跨线：演示价 4.00）
+- 下一步计划：下单与支付模拟、二维码签名与验证、取票机扫码出票
+
+## 常见问题与排查
+- 终端“卡住/提示终止批处理”：
+  - 后端是长时间运行任务，请专用一个终端启动；不要在同一终端里执行其他命令
+- `Unknown database 'subway_ticket_system'`：
+  - 未创建数据库或未导入 `schema.sql`；按“一次性初始化”步骤处理
+- 白标页 500（Whitelabel Error Page）：
+  - 查看后端日志；接口异常会返回 JSON 错误体（已启用全局异常处理）
+- 前端无法解析 `.vue` 或依赖：
+  - 已启用 `@vitejs/plugin-vue`；如依赖异常，执行 `npm i` 重装或删除 `node_modules` 与 `package-lock.json` 后再试
+- 端口冲突：
+  - 后端端口在 `backend/src/main/resources/application.yml` 可调整；前端端口在 `mobile/vite.config.js` 可调整
+
+## 注意
+- 不要将数据库密码写进代码或配置文件；仅通过终端环境变量设置
+- 每人本地 MySQL 密码可能不同，按自己环境填写
+
+
+---
+.\all.txt
+---
+
+
+---
+.\backend\pom.xml
+---
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.subway.ticket</groupId>
+  <artifactId>backend</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>subway-ticket-backend</name>
+  <properties>
+    <java.version>21</java.version>
+    <spring-boot.version>3.3.4</spring-boot.version>
+    <mybatis-plus.version>3.5.5</mybatis-plus.version>
+  </properties>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-boot-starter</artifactId>
+      <version>${mybatis-plus.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mybatis</groupId>
+      <artifactId>mybatis-spring</artifactId>
+      <version>3.0.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>2.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring-boot.version}</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+
+
+---
+.\backend\src\main\java\com\subway\ticket\Application.java
+---
+package com.subway.ticket;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+@MapperScan("com.subway.ticket.repository")
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\config\DataInitializer.java
+---
+package com.subway.ticket.config;
+
+import com.subway.ticket.domain.Line;
+import com.subway.ticket.domain.LineStation;
+import com.subway.ticket.domain.Station;
+import com.subway.ticket.repository.LineMapper;
+import com.subway.ticket.repository.LineStationMapper;
+import com.subway.ticket.repository.StationMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+@Component
+@Profile("db")
+public class DataInitializer implements CommandLineRunner {
+    private final LineMapper lineMapper;
+    private final StationMapper stationMapper;
+    private final LineStationMapper lineStationMapper;
+
+    public DataInitializer(LineMapper lineMapper, StationMapper stationMapper, LineStationMapper lineStationMapper) {
+        this.lineMapper = lineMapper;
+        this.stationMapper = stationMapper;
+        this.lineStationMapper = lineStationMapper;
+    }
+
+    @Override
+    public void run(String... args) {
+        Long lineCount = lineMapper.selectCount(null);
+        if (lineCount == null || lineCount == 0) {
+            Line l1 = new Line();
+            l1.setName("1号线");
+            l1.setColor("#FF0000");
+            l1.setCode("L1");
+            l1.setIsActive(1);
+            lineMapper.insert(l1);
+
+            Line l2 = new Line();
+            l2.setName("2号线");
+            l2.setColor("#00AEEF");
+            l2.setCode("L2");
+            l2.setIsActive(1);
+            lineMapper.insert(l2);
+        }
+
+        Long stationCount = stationMapper.selectCount(null);
+        if (stationCount == null || stationCount == 0) {
+            Line l1 = lineMapper.selectOne(new QueryWrapper<Line>().eq("code", "L1").last("limit 1"));
+            Line l2 = lineMapper.selectOne(new QueryWrapper<Line>().eq("code", "L2").last("limit 1"));
+
+            Station s1 = new Station();
+            s1.setName("A站");
+            s1.setLineId(l1.getId());
+            s1.setCode("L1-A");
+            s1.setIsActive(1);
+            stationMapper.insert(s1);
+
+            Station s2 = new Station();
+            s2.setName("B站");
+            s2.setLineId(l1.getId());
+            s2.setCode("L1-B");
+            s2.setIsActive(1);
+            stationMapper.insert(s2);
+
+            Station s3 = new Station();
+            s3.setName("C站");
+            s3.setLineId(l1.getId());
+            s3.setCode("L1-C");
+            s3.setIsActive(1);
+            stationMapper.insert(s3);
+
+            Station s4 = new Station();
+            s4.setName("D站");
+            s4.setLineId(l1.getId());
+            s4.setCode("L1-D");
+            s4.setIsActive(1);
+            stationMapper.insert(s4);
+
+            lineStationMapper.insert(ls(l1.getId(), s1.getId(), 1));
+            lineStationMapper.insert(ls(l1.getId(), s2.getId(), 2));
+            lineStationMapper.insert(ls(l1.getId(), s3.getId(), 3));
+            lineStationMapper.insert(ls(l1.getId(), s4.getId(), 4));
+
+            Station s5 = new Station();
+            s5.setName("E站");
+            s5.setLineId(l2.getId());
+            s5.setCode("L2-E");
+            s5.setIsActive(1);
+            stationMapper.insert(s5);
+
+            Station s6 = new Station();
+            s6.setName("F站");
+            s6.setLineId(l2.getId());
+            s6.setCode("L2-F");
+            s6.setIsActive(1);
+            stationMapper.insert(s6);
+
+            Station s7 = new Station();
+            s7.setName("G站");
+            s7.setLineId(l2.getId());
+            s7.setCode("L2-G");
+            s7.setIsActive(1);
+            stationMapper.insert(s7);
+
+            lineStationMapper.insert(ls(l2.getId(), s5.getId(), 1));
+            lineStationMapper.insert(ls(l2.getId(), s6.getId(), 2));
+            lineStationMapper.insert(ls(l2.getId(), s7.getId(), 3));
+        }
+    }
+
+    private LineStation ls(Long lineId, Long stationId, int seq) {
+        LineStation ls = new LineStation();
+        ls.setLineId(lineId);
+        ls.setStationId(stationId);
+        ls.setSeq(seq);
+        return ls;
+    }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\domain\Line.java
+---
+package com.subway.ticket.domain;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+
+@TableName("line")
+public class Line {
+    @TableId
+    private Long id;
+    private String name;
+    private String color;
+    private String code;
+    private Integer isActive;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+    public Integer getIsActive() { return isActive; }
+    public void setIsActive(Integer isActive) { this.isActive = isActive; }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\domain\LineStation.java
+---
+package com.subway.ticket.domain;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+
+@TableName("line_station")
+public class LineStation {
+    @TableId
+    private Long id;
+    private Long lineId;
+    private Long stationId;
+    private Integer seq;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getLineId() { return lineId; }
+    public void setLineId(Long lineId) { this.lineId = lineId; }
+    public Long getStationId() { return stationId; }
+    public void setStationId(Long stationId) { this.stationId = stationId; }
+    public Integer getSeq() { return seq; }
+    public void setSeq(Integer seq) { this.seq = seq; }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\domain\Station.java
+---
+package com.subway.ticket.domain;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+
+@TableName("station")
+public class Station {
+    @TableId
+    private Long id;
+    private String name;
+    private Long lineId;
+    private String code;
+    private Integer isActive;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Long getLineId() { return lineId; }
+    public void setLineId(Long lineId) { this.lineId = lineId; }
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
+    public Integer getIsActive() { return isActive; }
+    public void setIsActive(Integer isActive) { this.isActive = isActive; }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\repository\LineMapper.java
+---
+package com.subway.ticket.repository;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.subway.ticket.domain.Line;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface LineMapper extends BaseMapper<Line> {
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\repository\LineStationMapper.java
+---
+package com.subway.ticket.repository;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.subway.ticket.domain.LineStation;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface LineStationMapper extends BaseMapper<LineStation> {
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\repository\StationMapper.java
+---
+package com.subway.ticket.repository;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.subway.ticket.domain.Station;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface StationMapper extends BaseMapper<Station> {
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\web\FareController.java
+---
+package com.subway.ticket.web;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.subway.ticket.domain.LineStation;
+import com.subway.ticket.domain.Station;
+import com.subway.ticket.repository.LineStationMapper;
+import com.subway.ticket.repository.StationMapper;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.math.BigDecimal;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/fares")
+public class FareController {
+    private final StationMapper stationMapper;
+    private final LineStationMapper lineStationMapper;
+
+    public FareController(StationMapper stationMapper, LineStationMapper lineStationMapper) {
+        this.stationMapper = stationMapper;
+        this.lineStationMapper = lineStationMapper;
+    }
+
+    @GetMapping("/quote")
+    public ResponseEntity<FareQuote> quote(@RequestParam("from") String from, @RequestParam("to") String to) {
+        Station sFrom = stationMapper.selectList(new QueryWrapper<Station>().eq("code", from).last("limit 1")).stream().findFirst().orElse(null);
+        Station sTo = stationMapper.selectList(new QueryWrapper<Station>().eq("code", to).last("limit 1")).stream().findFirst().orElse(null);
+        if (sFrom == null || sTo == null) {
+            return ResponseEntity.badRequest().body(new FareQuote(from, to, 0, BigDecimal.ZERO, "NOT_FOUND"));
+        }
+        if (!sFrom.getLineId().equals(sTo.getLineId())) {
+            return ResponseEntity.ok(new FareQuote(from, to, -1, new BigDecimal("4.00"), "DIFF_LINE_SIMPLIFIED"));
+        }
+        LineStation lsFrom = lineStationMapper.selectList(new QueryWrapper<LineStation>().eq("station_id", sFrom.getId()).eq("line_id", sFrom.getLineId()).last("limit 1")).stream().findFirst().orElse(null);
+        LineStation lsTo = lineStationMapper.selectList(new QueryWrapper<LineStation>().eq("station_id", sTo.getId()).eq("line_id", sTo.getLineId()).last("limit 1")).stream().findFirst().orElse(null);
+        if (lsFrom == null || lsTo == null) {
+            return ResponseEntity.badRequest().body(new FareQuote(from, to, 0, BigDecimal.ZERO, "SEQ_NOT_FOUND"));
+        }
+        int segments = Math.abs(Optional.ofNullable(lsFrom.getSeq()).orElse(0) - Optional.ofNullable(lsTo.getSeq()).orElse(0));
+        BigDecimal price = new BigDecimal("2.00").add(new BigDecimal("0.50").multiply(new BigDecimal(segments)));
+        return ResponseEntity.ok(new FareQuote(from, to, segments, price, "SAME_LINE"));
+    }
+
+    public static class FareQuote {
+        public String from;
+        public String to;
+        public int segments;
+        public BigDecimal price;
+        public String mode;
+        public FareQuote(String from, String to, int segments, BigDecimal price, String mode) {
+            this.from = from;
+            this.to = to;
+            this.segments = segments;
+            this.price = price;
+            this.mode = mode;
+        }
+    }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\web\GlobalExceptionHandler.java
+---
+package com.subway.ticket.web;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Object> handle(Exception e) {
+        return ResponseEntity.status(500).body(new ErrorBody("INTERNAL_ERROR", e.getMessage()));
+    }
+
+    static class ErrorBody {
+        public String code;
+        public String message;
+        public ErrorBody(String code, String message) {
+            this.code = code;
+            this.message = message;
+        }
+    }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\web\HealthController.java
+---
+package com.subway.ticket.web;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api")
+public class HealthController {
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("OK");
+    }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\web\LineController.java
+---
+package com.subway.ticket.web;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.subway.ticket.domain.Line;
+import com.subway.ticket.repository.LineMapper;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api")
+public class LineController {
+    private final LineMapper lineMapper;
+
+    public LineController(LineMapper lineMapper) {
+        this.lineMapper = lineMapper;
+    }
+
+    @GetMapping("/lines")
+    public ResponseEntity<List<Line>> lines() {
+        List<Line> list = lineMapper.selectList(new QueryWrapper<Line>().eq("is_active", 1));
+        return ResponseEntity.ok(list);
+    }
+}
+
+
+---
+.\backend\src\main\java\com\subway\ticket\web\StationController.java
+---
+package com.subway.ticket.web;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.subway.ticket.domain.Station;
+import com.subway.ticket.repository.StationMapper;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api")
+public class StationController {
+    private final StationMapper stationMapper;
+
+    public StationController(StationMapper stationMapper) {
+        this.stationMapper = stationMapper;
+    }
+
+    @GetMapping("/stations")
+    public ResponseEntity<List<Station>> stations(@RequestParam("lineId") Long lineId) {
+        List<Station> list = stationMapper.selectList(new QueryWrapper<Station>().eq("line_id", lineId).eq("is_active", 1).orderByAsc("id"));
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/stations/all")
+    public ResponseEntity<List<Station>> all() {
+        List<Station> list = stationMapper.selectList(new QueryWrapper<Station>().eq("is_active", 1).orderByAsc("id"));
+        return ResponseEntity.ok(list);
+    }
+}
+
+
+---
+.\backend\src\main\resources\application-db.yml
+---
+spring:
+  application:
+    name: subway-ticket-backend
+  autoconfigure:
+    exclude: []
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+
+---
+.\backend\src\main\resources\application.yml
+---
+server:
+  port: 8080
+spring:
+  application:
+    name: subway-ticket-backend
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+
+---
+.\db\schema.sql
+---
+CREATE TABLE IF NOT EXISTS line (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  color VARCHAR(16) NOT NULL,
+  code VARCHAR(16) NOT NULL UNIQUE,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS station (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  line_id BIGINT NOT NULL,
+  code VARCHAR(16) NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_station_line(line_id),
+  CONSTRAINT fk_station_line FOREIGN KEY (line_id) REFERENCES line(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS line_station (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  line_id BIGINT NOT NULL,
+  station_id BIGINT NOT NULL,
+  seq INT NOT NULL,
+  INDEX idx_line_station_line(line_id),
+  INDEX idx_line_station_station(station_id),
+  CONSTRAINT fk_ls_line FOREIGN KEY (line_id) REFERENCES line(id),
+  CONSTRAINT fk_ls_station FOREIGN KEY (station_id) REFERENCES station(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS fare_rule (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  rule_type VARCHAR(32) NOT NULL,
+  base_price DECIMAL(10,2) NOT NULL DEFAULT 2.00,
+  per_segment_price DECIMAL(10,2) NOT NULL DEFAULT 0.50,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS orders (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NULL,
+  from_station_id BIGINT NOT NULL,
+  to_station_id BIGINT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_orders_status(status),
+  CONSTRAINT fk_orders_from FOREIGN KEY (from_station_id) REFERENCES station(id),
+  CONSTRAINT fk_orders_to FOREIGN KEY (to_station_id) REFERENCES station(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS payment (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  paid_at TIMESTAMP NULL,
+  channel VARCHAR(32) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_payment_order(order_id),
+  CONSTRAINT fk_payment_order FOREIGN KEY (order_id) REFERENCES orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS qrcode_token (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  nonce VARCHAR(64) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  signature VARCHAR(128) NOT NULL,
+  payload TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_qr_order(order_id),
+  CONSTRAINT fk_qr_order FOREIGN KEY (order_id) REFERENCES orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ticket (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  qrcode_token_id BIGINT NOT NULL,
+  issued_at TIMESTAMP NULL,
+  status VARCHAR(16) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_ticket_order(order_id),
+  CONSTRAINT fk_ticket_order FOREIGN KEY (order_id) REFERENCES orders(id),
+  CONSTRAINT fk_ticket_qr FOREIGN KEY (qrcode_token_id) REFERENCES qrcode_token(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+---
+.\mobile\index.html
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>手机端购票演示</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
+
+---
+.\mobile\package.json
+---
+{
+  "name": "mobile",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "element-plus": "^2.8.6",
+    "vue": "^3.5.11"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8",
+    "@vitejs/plugin-vue": "^5.0.4"
+  }
+}
+
+
+---
+.\mobile\vite.config.js
+---
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import path from 'node:path'
+
+export default defineConfig({
+  plugins: [vue()],
+  root: '.',
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  }
+})
+
+
+---
+.\mobile\src\App.vue
+---
+<template>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-title">地铁购票演示：选线选站 + 票价试算</div>
+
+      <div class="form-row">
+        <label class="label">线路</label>
+        <select class="input" v-model="selectedLineId" @change="onLineChange">
+          <option disabled value="">请选择线路</option>
+          <option v-for="l in lines" :key="l.id" :value="l.id">{{ l.name }}</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="label">起点站</label>
+        <select class="input" v-model="fromCode">
+          <option disabled value="">请选择起点站</option>
+          <option v-for="s in stations" :key="s.id" :value="s.code">{{ s.name }}</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="label">终点站</label>
+        <select class="input" v-model="toCode">
+          <option disabled value="">请选择终点站</option>
+          <option v-for="s in stations" :key="s.id" :value="s.code">{{ s.name }}</option>
+        </select>
+      </div>
+
+      <div class="actions">
+        <button class="btn" :disabled="loading || !fromCode || !toCode" @click="quoteFare">试算票价</button>
+      </div>
+
+      <hr />
+
+      <div v-if="quote" class="result">
+        <div class="result-title">票价试算结果</div>
+        <div>起点：{{ quote.from }}，终点：{{ quote.to }}</div>
+        <div>段数：{{ quote.segments }}，价格：￥{{ quote.price }}</div>
+        <div>模式：{{ quote.mode }}</div>
+      </div>
+      <div v-else class="empty">请选择线路与站点后试算票价</div>
+      <div v-if="error" class="error">{{ error }}</div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const api = axios.create({ baseURL: '/api' })
+
+const lines = ref([])
+const stations = ref([])
+const selectedLineId = ref(null)
+const fromCode = ref('')
+const toCode = ref('')
+const quote = ref(null)
+const error = ref('')
+const loading = ref(false)
+
+onMounted(async () => {
+  const res = await api.get('/lines')
+  lines.value = res.data || []
+  if (lines.value.length) {
+    selectedLineId.value = lines.value[0].id
+    await loadStations(selectedLineId.value)
+  }
+})
+
+async function onLineChange() {
+  fromCode.value = ''
+  toCode.value = ''
+  quote.value = null
+  await loadStations(selectedLineId.value)
+}
+
+async function loadStations(lineId) {
+  if (!lineId) return
+  const res = await api.get('/stations', { params: { lineId } })
+  stations.value = res.data || []
+}
+
+async function quoteFare() {
+  if (!fromCode.value || !toCode.value) return
+  loading.value = true
+  try {
+    const res = await api.get('/fares/quote', { params: { from: fromCode.value, to: toCode.value } })
+    quote.value = res.data
+    error.value = ''
+  } catch (e) {
+    error.value = (e && e.response && e.response.data && e.response.data.message) ? e.response.data.message : '请求失败'
+    quote.value = null
+  } finally {
+    loading.value = false
+  }
+}
+</script>
+
+<style>
+body { background: #f5f7fa; }
+.wrap { max-width: 640px; margin: 24px auto; padding: 16px; }
+.card { background: #fff; border-radius: 8px; box-shadow: 0 1px 8px rgba(0,0,0,0.06); padding: 16px; }
+.card-title { font-weight: 600; margin-bottom: 12px; }
+.form-row { display: flex; align-items: center; margin-bottom: 12px; }
+.label { width: 96px; color: #666; }
+.input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+.actions { margin-top: 8px; }
+.btn { padding: 8px 12px; border: none; border-radius: 6px; background: #409eff; color: #fff; cursor: pointer; }
+.btn:disabled { background: #a0cfff; cursor: not-allowed; }
+.result { padding: 8px; background: #f0f9eb; border: 1px solid #e1f3d8; border-radius: 6px; }
+.result-title { font-weight: 600; margin-bottom: 6px; }
+.empty { color: #999; text-align: center; padding: 16px; }
+.error { color: #f56c6c; text-align: center; padding: 8px; }
+</style>
+
+
+---
+.\mobile\src\main.js
+---
+import { createApp } from 'vue'
+import App from './App.vue'
+
+createApp(App).mount('#app')
+
+
+---
