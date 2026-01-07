@@ -15,12 +15,40 @@ export function useTicket() {
   const qr = ref(null)
   const qrImg = ref('')
 
+  const history = ref([])
+
+  // Initialize history from localStorage
+  try {
+    const saved = localStorage.getItem('subway_orders')
+    if (saved) {
+      history.value = JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('Failed to load history', e)
+  }
+
   function setSelectionMode(mode) {
     selectionMode.value = mode
   }
 
   function resetQuote() {
     quote.value = null
+  }
+  
+  function saveToHistory(orderData, fromNameStr, toNameStr) {
+    const item = {
+      id: orderData.id,
+      price: orderData.price,
+      fromName: fromNameStr,
+      toName: toNameStr,
+      createdAt: new Date().toISOString() // Use client time for display simplicity
+    }
+    history.value.unshift(item) // Add to top
+    // Limit history size to 20
+    if (history.value.length > 20) {
+      history.value = history.value.slice(0, 20)
+    }
+    localStorage.setItem('subway_orders', JSON.stringify(history.value))
   }
 
   /**
@@ -82,13 +110,26 @@ export function useTicket() {
     }
   }
 
-  async function orderAndPay() {
-    if (!fromCode.value || !toCode.value) return
+  async function createOrderAction() {
+    if (!fromCode.value || !toCode.value) return false
     loading.value = true
     try {
       const createRes = await createOrder({ from: fromCode.value, to: toCode.value })
       order.value = createRes.data
-      
+      error.value = ''
+      return true
+    } catch (e) {
+      error.value = e.response?.data?.message || '下单失败'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function payOrderAction() {
+    if (!order.value) return false
+    loading.value = true
+    try {
       await mockPay(order.value.id)
       
       const qrRes = await getQrCode(order.value.id)
@@ -96,12 +137,44 @@ export function useTicket() {
       
       const QRCode = (await import('qrcode')).default
       qrImg.value = await QRCode.toDataURL(JSON.stringify(qr.value))
+      
+      // Save to history
+      saveToHistory(order.value, fromName.value, toName.value)
+      
       error.value = ''
+      return true
     } catch (e) {
-      error.value = e.response?.data?.message || '下单失败'
+      error.value = e.response?.data?.message || '支付失败'
+      return false
     } finally {
       loading.value = false
     }
+  }
+
+  async function fetchQrForHistory(item) {
+      loading.value = true
+      try {
+        const qrRes = await getQrCode(item.id)
+        qr.value = qrRes.data
+        
+        const QRCode = (await import('qrcode')).default
+        qrImg.value = await QRCode.toDataURL(JSON.stringify(qr.value))
+        
+        // Restore display info for modal
+        fromName.value = item.fromName
+        toName.value = item.toName
+        // If we want to show price in modal, we might need to ensure quote/order is set or pass it directly.
+        // TicketModal uses quote?.price, so let's mock a quote object or update TicketModal to accept props more flexibly.
+        // Easier: update quote ref
+        quote.value = { price: item.price }
+        
+        return true
+      } catch (e) {
+        error.value = '无法获取二维码，可能订单已过期'
+        return false
+      } finally {
+        loading.value = false
+      }
   }
 
   function closeQr() {
@@ -121,12 +194,15 @@ export function useTicket() {
     order,
     qr,
     qrImg,
+    history,
     
     // Actions
     setSelectionMode,
     handleStationSelect,
     fetchQuote,
-    orderAndPay,
+    createOrderAction,
+    payOrderAction,
+    fetchQrForHistory,
     closeQr
   }
 }

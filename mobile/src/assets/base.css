@@ -29,6 +29,49 @@
   font-size: 16px;
 }
 
+/* History Button */
+.btn-history {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 20px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100; /* Above map */
+  cursor: pointer;
+}
+.btn-history span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-left: 6px;
+}
+.icon-clock {
+  width: 16px; height: 16px;
+  border: 2px solid #333;
+  border-radius: 50%;
+  position: relative;
+}
+.icon-clock::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 6px;
+  width: 2px; height: 6px;
+  background: #333;
+}
+.icon-clock::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 6px;
+  width: 4px; height: 2px;
+  background: #333;
+}
+
 /* Common Layout Utilities */
 .loading-tips {
   text-align: center;

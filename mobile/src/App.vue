@@ -2,6 +2,12 @@
   <div class="app-container">
     <SubwayMap ref="mapRef" @select="onStationSelect" />
     
+    <!-- History Button -->
+    <button class="btn-history" @click="showHistory = true">
+      <div class="icon-clock"></div>
+      <span>订单</span>
+    </button>
+
     <FarePanel 
       :fromName="fromName" 
       :toName="toName" 
@@ -9,10 +15,20 @@
       :quote="quote" 
       :error="error"
       :activeMode="selectionMode"
-      @order="orderAndPay"
+      @order="onOrderClick"
       @switch-mode="setSelectionMode"
       @calculate="onCalculate"
       @open-search="onOpenSearch"
+    />
+
+    <PaymentModal
+      :show="showPayment"
+      :order="order"
+      :fromName="fromName"
+      :toName="toName"
+      :loading="loading"
+      @close="showPayment = false"
+      @pay="onPayConfirm"
     />
 
     <TicketModal 
@@ -29,6 +45,13 @@
       @close="showSearch = false"
       @select="onSearchResultSelect"
     />
+
+    <HistoryModal
+      :show="showHistory"
+      :history="history"
+      @close="showHistory = false"
+      @select="onHistorySelect"
+    />
   </div>
 </template>
 
@@ -38,16 +61,44 @@ import SubwayMap from './components/SubwayMap.vue'
 import FarePanel from './components/FarePanel.vue'
 import TicketModal from './components/TicketModal.vue'
 import StationSearchModal from './components/StationSearchModal.vue'
+import PaymentModal from './components/PaymentModal.vue'
+import HistoryModal from './components/HistoryModal.vue'
 import {useTicket} from './composables/useTicket'
 
 const mapRef = ref(null)
 const showSearch = ref(false)
+const showPayment = ref(false)
+const showHistory = ref(false)
 
 const {
   fromCode, toCode, fromName, toName, selectionMode,
-  quote, error, loading, qr, qrImg,
-  setSelectionMode, handleStationSelect, fetchQuote, orderAndPay, closeQr
+  quote, error, loading, order, qr, qrImg, history,
+  setSelectionMode, handleStationSelect, fetchQuote, 
+  createOrderAction, payOrderAction, fetchQrForHistory, closeQr
 } = useTicket()
+
+async function onOrderClick() {
+  const success = await createOrderAction()
+  if (success) {
+    showPayment.value = true
+  }
+}
+
+async function onPayConfirm() {
+  const success = await payOrderAction()
+  if (success) {
+    showPayment.value = false
+    // TicketModal will show automatically because `qr` is set
+  }
+}
+
+async function onHistorySelect(item) {
+  const success = await fetchQrForHistory(item)
+  if (success) {
+    showHistory.value = false
+    // TicketModal shows automatically
+  }
+}
 
 function onStationSelect({ id, name }) {
   // Pass the CURRENT selectionMode before it might get updated inside handleStationSelect?
