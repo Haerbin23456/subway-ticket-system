@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>手机端购票演示</title>
     <!-- 引入高德地图API -->
-    <script src="https://webapi.amap.com/subway?v=1.0&key=76311822c6682970724838647038166d&callback=cbk"></script>
+    <script type="text/javascript">
+      window._AMapSecurityConfig = {
+        securityJsCode: 'ee240c6bb845032b1301bcdc88f898ba',
+      }
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=439aed9ed504b2b58bd8dd4a46c47839&plugin=AMap.AutoComplete,AMap.PlaceSearch"></script>
+    <script src="https://webapi.amap.com/subway?v=1.0&key=在此输入你的Key&callback=cbk"></script>
   </head>
   <body>
     <div id="app"></div>

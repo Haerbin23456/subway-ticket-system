@@ -5,3 +5,7 @@ export function searchStations(keyword) {
     params: { keyword }
   })
 }
+
+export function getAllStations() {
+  return request.get('/stations/all')
+}

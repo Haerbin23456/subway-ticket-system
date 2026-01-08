@@ -186,7 +186,37 @@ public class GraphService {
     }
     
     public String getLineColor(String lineName, String dbColor) {
-        return mockLineColors.containsKey(lineName) ? mockLineColors.get(lineName) : (dbColor != null ? dbColor : "#999");
+        if (lineName == null) return dbColor != null ? ensureHashPrefix(dbColor) : "#999";
+        
+        // Extract main name, e.g. "3号线 (石马-星桥)" -> "3号线"
+        String mainName = lineName;
+        int parenIdx = lineName.indexOf(" (");
+        if (parenIdx > 0) {
+            mainName = lineName.substring(0, parenIdx);
+        } else {
+            // Also check for simple parenthesis without space
+            parenIdx = lineName.indexOf("(");
+            if (parenIdx > 0) {
+                mainName = lineName.substring(0, parenIdx);
+            }
+        }
+        mainName = mainName.trim();
+
+        if (mockLineColors.containsKey(mainName)) {
+            return mockLineColors.get(mainName);
+        }
+        
+        return dbColor != null ? ensureHashPrefix(dbColor) : "#999";
+    }
+
+    private String ensureHashPrefix(String color) {
+        if (color == null || color.isEmpty()) return "#999";
+        if (color.startsWith("#")) return color;
+        // Check if it's a valid hex string (3 or 6 chars)
+        if (color.matches("^[0-9a-fA-F]{3,6}$")) {
+            return "#" + color;
+        }
+        return color;
     }
     
     public boolean isEmpty() {

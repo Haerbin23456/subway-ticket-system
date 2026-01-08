@@ -10,7 +10,9 @@ import com.subway.ticket.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -23,10 +25,11 @@ public class DataInitializer implements CommandLineRunner {
     private final TicketMapper ticketMapper;
     private final PaymentMapper paymentMapper;
     private final QrcodeTokenMapper qrcodeTokenMapper;
+    private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(LineMapper lineMapper, StationMapper stationMapper, LineStationMapper lineStationMapper,
                            OrderMapper orderMapper, TicketMapper ticketMapper, PaymentMapper paymentMapper, 
-                           QrcodeTokenMapper qrcodeTokenMapper) {
+                           QrcodeTokenMapper qrcodeTokenMapper, JdbcTemplate jdbcTemplate) {
         this.lineMapper = lineMapper;
         this.stationMapper = stationMapper;
         this.lineStationMapper = lineStationMapper;
@@ -34,10 +37,13 @@ public class DataInitializer implements CommandLineRunner {
         this.ticketMapper = ticketMapper;
         this.paymentMapper = paymentMapper;
         this.qrcodeTokenMapper = qrcodeTokenMapper;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
+    @Transactional
     public void run(String... args) {
+        checkAndUpgradeDatabase();
         // Load from classpath
         String jsonFile = "hangzhou_subway.json";
         org.springframework.core.io.Resource resource = new org.springframework.core.io.ClassPathResource(jsonFile);
@@ -72,32 +78,29 @@ public class DataInitializer implements CommandLineRunner {
             for (JsonNode lineNode : linesNode) {
                 // Line Info
                 String lineName = lineNode.path("ln").asText(); // "1号线"
+                String lineDirection = lineNode.path("la").asText(); // "湘湖-萧山国际机场"
                 String lineCode = lineNode.path("ls").asText(); // "330100023133"
                 String lineColor = lineNode.path("cl").asText(); // "color"
-                if (lineColor == null || lineColor.isEmpty()) lineColor = "#1a4695"; // Default
+                if (lineColor == null || lineColor.isEmpty()) {
+                    lineColor = "#1a4695"; // Default
+                } else if (!lineColor.startsWith("#")) {
+                    lineColor = "#" + lineColor;
+                }
 
-                // If lineCode is complex, maybe generate a simple one
-                String simpleCode = lineNode.path("kn").asText(); // "1"
-                if (simpleCode != null && !simpleCode.isEmpty()) {
-                    lineCode = simpleCode;
+                // If direction exists, append it to name for better clarity
+                String displayName = lineName;
+                if (lineDirection != null && !lineDirection.isEmpty()) {
+                    displayName = lineName + " (" + lineDirection + ")";
                 }
 
                 Line line = new Line();
-                line.setName(lineName);
+                line.setName(displayName);
                 line.setCode(lineCode);
                 line.setColor(lineColor);
                 line.setIsActive(1);
                 
-                // Check for duplicate line code
-                QueryWrapper<Line> query = new QueryWrapper<>();
-                query.eq("code", lineCode);
-                if (lineMapper.selectCount(query) > 0) {
-                     log.warn("Skipping duplicate line code: {}", lineCode);
-                     continue; 
-                }
-                
                 lineMapper.insert(line);
-                log.info("Importing Line: {}", lineName);
+                log.info("Importing Line: {} (Code: {})", lineName, lineCode);
 
                 // Stations
                 JsonNode stationsNode = lineNode.path("st");
@@ -107,14 +110,31 @@ public class DataInitializer implements CommandLineRunner {
                         String stName = stNode.path("n").asText();
                         String stId = stNode.path("sid").asText(); // Unique ID
                         
-                        // Create Station Record
-                        Station station = new Station();
-                        station.setName(stName);
-                        station.setLineId(line.getId());
-                        station.setCode(stId);
-                        station.setIsActive(1);
-                        stationMapper.insert(station);
-
+                        // Check if station already exists by name
+                        QueryWrapper<Station> stQuery = new QueryWrapper<>();
+                        stQuery.eq("name", stName);
+                        // Optional: Also check coordinates distance to ensure it's the same physical station
+                        Station station = stationMapper.selectOne(stQuery);
+                        
+                        if (station == null) {
+                            station = new Station();
+                            station.setName(stName);
+                            station.setLineId(line.getId());
+                            station.setCode(stId);
+                            station.setIsActive(1);
+                            
+                            // Parse coordinates
+                            String sl = stNode.path("sl").asText();
+                            if (sl != null && sl.contains(",")) {
+                                String[] parts = sl.split(",");
+                                try {
+                                    station.setLng(Double.parseDouble(parts[0]));
+                                    station.setLat(Double.parseDouble(parts[1]));
+                                } catch (Exception e) {}
+                            }
+                            stationMapper.insert(station);
+                        }
+                        
                         // Link Line-Station
                         LineStation ls = new LineStation();
                         ls.setLineId(line.getId());
@@ -132,6 +152,25 @@ public class DataInitializer implements CommandLineRunner {
             
         } catch (Exception e) {
             log.error("Data initialization failed", e);
+        }
+    }
+
+    private void checkAndUpgradeDatabase() {
+        try {
+            log.info("Checking if database upgrade is needed...");
+            // Check if 'lng' column exists in 'station' table
+            Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'station' AND column_name = 'lng'", 
+                Integer.class
+            );
+            if (count == null || count == 0) {
+                log.info("Column 'lng' not found in 'station' table. Upgrading database...");
+                jdbcTemplate.execute("ALTER TABLE station ADD COLUMN lng DOUBLE");
+                jdbcTemplate.execute("ALTER TABLE station ADD COLUMN lat DOUBLE");
+                log.info("Database upgraded successfully.");
+            }
+        } catch (Exception e) {
+            log.error("Failed to check/upgrade database: {}", e.getMessage());
         }
     }
 }
