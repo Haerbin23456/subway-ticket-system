@@ -1,19 +1,16 @@
 package com.subway.ticket.dto;
 
-public class RouteStep {
-    public String lineName;
-    public String lineColor;
-    public String fromStation;
-    public String toStation;
-    public int stationCount;
-    
-    public RouteStep() {}
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-    public RouteStep(String lineName, String lineColor, String fromStation, String toStation, int stationCount) {
-        this.lineName = lineName;
-        this.lineColor = lineColor;
-        this.fromStation = fromStation;
-        this.toStation = toStation;
-        this.stationCount = stationCount;
-    }
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class RouteStep {
+    private String lineName;
+    private String lineColor;
+    private String fromStation;
+    private String toStation;
+    private int stationCount;
 }

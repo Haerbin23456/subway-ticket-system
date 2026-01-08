@@ -7,14 +7,6 @@ spring:
     name: subway-ticket-backend
   autoconfigure:
     exclude: []
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: never
 
 subway:
   fare:

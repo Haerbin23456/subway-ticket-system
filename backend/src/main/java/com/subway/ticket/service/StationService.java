@@ -42,8 +42,6 @@ public class StationService {
             query.like("name", keyword);
             // Limit only when searching to avoid huge result if user spams search
             query.last("LIMIT 50");
-        } else {
-            // No keyword -> Return ALL stations (removed limit)
         }
         
         List<Station> list = stationMapper.selectList(query);

@@ -4,7 +4,7 @@
     
     <!-- History Button -->
     <button class="btn-history" @click="showHistory = true">
-      <div class="icon-clock"></div>
+      <span class="icon-clock"></span>
       <span>订单</span>
     </button>
 
@@ -71,7 +71,7 @@ const showPayment = ref(false)
 const showHistory = ref(false)
 
 const {
-  fromCode, toCode, fromName, toName, selectionMode,
+  fromName, toName, selectionMode,
   quote, error, loading, order, qr, qrImg, history,
   setSelectionMode, handleStationSelect, fetchQuote, 
   createOrderAction, payOrderAction, fetchQrForHistory, closeQr

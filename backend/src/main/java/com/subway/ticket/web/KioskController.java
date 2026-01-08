@@ -10,6 +10,8 @@ import com.subway.ticket.repository.QrcodeTokenMapper;
 import com.subway.ticket.repository.TicketMapper;
 import com.subway.ticket.service.QrSignService;
 import com.subway.ticket.service.StationService;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -91,6 +93,8 @@ public class KioskController {
         return ResponseEntity.ok(new IssueResp(true, info));
     }
 
+    @Getter
+    @Setter
     public static class QrPayload {
         public Long orderId;
         public String nonce;
@@ -98,6 +102,8 @@ public class KioskController {
         public String sign;
     }
 
+    @Getter
+    @Setter
     public static class ValidateResp {
         public boolean valid;
         public String reason;
@@ -107,6 +113,8 @@ public class KioskController {
         }
     }
 
+    @Getter
+    @Setter
     public static class IssueResp {
         public boolean issued;
         public TicketInfo ticket;
@@ -116,6 +124,8 @@ public class KioskController {
         }
     }
     
+    @Getter
+    @Setter
     public static class TicketInfo {
         public String fromStation;
         public String toStation;

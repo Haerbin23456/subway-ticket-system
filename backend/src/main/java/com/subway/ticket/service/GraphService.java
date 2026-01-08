@@ -20,28 +20,28 @@ public class GraphService {
     private final LineMapper lineMapper;
 
     // Graph representation: (LineStation ID) -> List of Connected (LineStation IDs)
-    private Map<Long, Set<Long>> graph = new HashMap<>();
+    private final Map<Long, Set<Long>> graph = new HashMap<>();
     
     // LineStation ID -> Station Name (for display & transfer detection)
-    private Map<Long, String> nodeNames = new HashMap<>();
+    private final Map<Long, String> nodeNames = new HashMap<>();
     
     // Station Name -> List of LineStation IDs (for finding start/end nodes)
-    private Map<String, List<Long>> nameToNodeIds = new HashMap<>();
+    private final Map<String, List<Long>> nameToNodeIds = new HashMap<>();
     
     // LineStation ID -> Station Code (for result mapping)
-    private Map<Long, String> nodeToCode = new HashMap<>();
+    private final Map<Long, String> nodeToCode = new HashMap<>();
 
     // LineStation ID -> Line ID (to check if same line)
-    private Map<Long, Long> nodeToLineId = new HashMap<>();
+    private final Map<Long, Long> nodeToLineId = new HashMap<>();
     
     // Station ID -> List of LineStation IDs (to detect transfers via Station ID)
-    private Map<Long, List<Long>> stationIdToLineStationIds = new HashMap<>();
+    private final Map<Long, List<Long>> stationIdToLineStationIds = new HashMap<>();
     
     // Line ID -> Line Info (Name, Color)
-    private Map<Long, Line> lineInfoMap = new HashMap<>();
+    private final Map<Long, Line> lineInfoMap = new HashMap<>();
 
     // Mock colors map for fallback/better visibility
-    private Map<String, String> mockLineColors = new HashMap<>();
+    private final Map<String, String> mockLineColors = new HashMap<>();
 
     // Configurable weights for Dijkstra
     // Injected via application.properties or defaulted here

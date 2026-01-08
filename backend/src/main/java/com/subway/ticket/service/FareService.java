@@ -94,7 +94,7 @@ public class FareService {
 
         Long currentLineId = null;
         String startStation = null;
-        String endStation = null;
+        String endStation;
         int count = 0;
 
         for (int i = 0; i < pathIds.size(); i++) {
@@ -109,12 +109,7 @@ public class FareService {
                 if (!Objects.equals(lineId, currentLineId)) {
                     // Line changed!
                     endStation = graphService.getNameById(pathIds.get(i - 1));
-                    Line line = graphService.getLineInfo(currentLineId);
-                    
-                    String lName = line != null ? line.getName() : "Unknown Line";
-                    String lColor = graphService.getLineColor(lName, line != null ? line.getColor() : null);
-
-                    steps.add(new RouteStep(lName, lColor, startStation, endStation, count));
+                    steps.add(createRouteStep(currentLineId, startStation, endStation, count));
 
                     currentLineId = lineId;
                     startStation = stationName;
@@ -126,14 +121,17 @@ public class FareService {
         }
 
         if (startStation != null && count > 0) {
-            endStation = graphService.getNameById(pathIds.get(pathIds.size() - 1));
-            Line line = graphService.getLineInfo(currentLineId);
-            String lName = line != null ? line.getName() : "Unknown Line";
-            String lColor = graphService.getLineColor(lName, line != null ? line.getColor() : null);
-
-            steps.add(new RouteStep(lName, lColor, startStation, endStation, count));
+            endStation = graphService.getNameById(pathIds.getLast());
+            steps.add(createRouteStep(currentLineId, startStation, endStation, count));
         }
 
         return steps;
+    }
+
+    private RouteStep createRouteStep(Long lineId, String startStation, String endStation, int count) {
+        Line line = graphService.getLineInfo(lineId);
+        String lName = line != null ? line.getName() : "Unknown Line";
+        String lColor = graphService.getLineColor(lName, line != null ? line.getColor() : null);
+        return new RouteStep(lName, lColor, startStation, endStation, count);
     }
 }

@@ -96,7 +96,6 @@ function formatTime(isoStr) {
   padding: 16px;
   margin-bottom: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-  active: scale(0.98);
   transition: transform 0.1s;
 }
 .history-item:active { transform: scale(0.98); }

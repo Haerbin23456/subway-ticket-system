@@ -33,27 +33,27 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public Order createOrder(CreateOrderReq req) {
         // 1. Calculate price using the same logic as quote
-        FareQuote quote = fareService.calculateFare(req.from, req.to);
+        FareQuote quote = fareService.calculateFare(req.getFrom(), req.getTo());
         
-        if (quote == null || quote.price == null) {
+        if (quote == null || quote.getPrice() == null) {
              throw new BusinessException("无法计算票价，请检查站点是否连通");
         }
         
-        Station sFrom = stationMapper.selectOne(new QueryWrapper<Station>().eq("code", req.from).last("limit 1"));
-        Station sTo = stationMapper.selectOne(new QueryWrapper<Station>().eq("code", req.to).last("limit 1"));
+        Station sFrom = stationMapper.selectOne(new QueryWrapper<Station>().eq("code", req.getFrom()).last("limit 1"));
+        Station sTo = stationMapper.selectOne(new QueryWrapper<Station>().eq("code", req.getTo()).last("limit 1"));
         
         if (sFrom == null) {
-            throw new BusinessException("出发站不存在: " + req.from);
+            throw new BusinessException("出发站不存在: " + req.getFrom());
         }
         if (sTo == null) {
-            throw new BusinessException("到达站不存在: " + req.to);
+            throw new BusinessException("到达站不存在: " + req.getTo());
         }
 
         Order o = new Order();
         o.setUserId(null); // Anonymous
         o.setFromStationId(sFrom.getId());
         o.setToStationId(sTo.getId());
-        o.setPrice(quote.price);
+        o.setPrice(quote.getPrice());
         o.setStatus(OrderStatus.CREATED);
         o.setCreatedAt(LocalDateTime.now());
         o.setUpdatedAt(LocalDateTime.now());

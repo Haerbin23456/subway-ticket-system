@@ -123,18 +123,23 @@ async function handleScan(data) {
   state.value = 'PROCESSING'
   processMsg.value = '正在验证二维码...'
   
-  try {
-    let payload
-    try {
-      payload = JSON.parse(data)
-    } catch (e) {
-      throw new Error('二维码格式错误')
-    }
+  const setError = (msg) => {
+    state.value = 'ERROR'
+    errorMsg.value = msg
+  }
 
+  let payload
+  try {
+    payload = JSON.parse(data)
+  } catch (e) {
+    return setError('二维码格式错误')
+  }
+
+  try {
     // 1. Validate
     const v = await api.post('/kiosk/validate', payload)
     if (!v.data || !v.data.valid) {
-      throw new Error(v.data?.reason || '二维码无效或已使用')
+      return setError(v.data?.reason || '二维码无效或已使用')
     }
 
     // 2. Issue Ticket
@@ -148,12 +153,10 @@ async function handleScan(data) {
       state.value = 'SUCCESS'
       startCountdown()
     } else {
-      throw new Error('出票系统异常')
+      setError('出票系统异常')
     }
-    
   } catch (e) {
-    state.value = 'ERROR'
-    errorMsg.value = e.response?.data?.message || e.message || '系统繁忙'
+    setError(e.response?.data?.message || e.message || '系统繁忙')
   }
 }
 

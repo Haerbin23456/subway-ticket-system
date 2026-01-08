@@ -33,7 +33,7 @@ public class QrcodeController {
     }
 
     @GetMapping("/orders/{id}/qrcode")
-    public ResponseEntity<?> qrcode(@PathVariable("id") Long id) {
+    public ResponseEntity<?> qrcode(@PathVariable Long id) {
         Order o = orderMapper.selectById(id);
         if (o == null) return ResponseEntity.notFound().build();
         

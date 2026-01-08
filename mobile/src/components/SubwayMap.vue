@@ -141,7 +141,7 @@ function centerStation(name) {
     subwayInstance.clearInfoWindow();
     
     // Get center coordinates and set map center
-    var center = subwayInstance.getStCenter(name);
+    const center = subwayInstance.getStCenter(name);
     if (center) {
       subwayInstance.setCenter(center);
     }

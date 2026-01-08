@@ -14,13 +14,13 @@ public class DatabaseFailureAnalyzer extends AbstractFailureAnalyzer<SQLExceptio
     @Override
     protected FailureAnalysis analyze(Throwable rootFailure, SQLException cause) {
         String description = "数据库连接失败，请检查配置信息。";
-        String action = "1. 请检查 application-db.yml 中的数据库配置（URL, 用户名, 密码）。\n" +
-                        "2. 确保数据库服务已启动并可访问。\n" +
-                        "3. 如果是密码错误，请确认环境变量或配置文件中的密码是否正确。";
+        String action = """
+                1. 请检查 application-db.yml 中的数据库配置（URL, 用户名, 密码）。
+                2. 确保数据库服务已启动并可访问。
+                3. 如果是密码错误，请确认环境变量或配置文件中的密码是否正确。""";
 
-        // 可以根据具体的 SQLState 或 ErrorCode 细化错误信息
+        // 可以根据具体的 SQLState 细化错误信息
         String sqlState = cause.getSQLState();
-        int errorCode = cause.getErrorCode();
 
         if ("28000".equals(sqlState)) {
             description = "数据库认证失败：用户名或密码错误。";
