@@ -9,6 +9,9 @@ spring:
     exclude: []
 
 subway:
+  graph:
+    cost-per-station: 100
+    cost-per-transfer: 350
   fare:
     base-price: 2.00
     base-distance: 2

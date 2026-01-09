@@ -1,7 +1,7 @@
 <template>
   <div v-if="show" class="qr-modal-overlay" @click="$emit('close')">
     <div class="qr-modal" @click.stop>
-      <div class="modal-title">出票成功</div>
+      <div class="modal-title">支付成功</div>
       <div class="qr-container">
         <img :src="qrImg" alt="QR" />
       </div>
