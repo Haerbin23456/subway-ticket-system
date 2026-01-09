@@ -14,7 +14,9 @@ dist/
 *.iml
 !kiosk/kiosk.iml
 !mobile/mobile.iml
+!backend/backend.iml
 
 # VS Code
 .vscode/
 
+out/
