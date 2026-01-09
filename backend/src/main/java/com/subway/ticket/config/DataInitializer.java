@@ -43,7 +43,6 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        checkAndUpgradeDatabase();
         // Load from classpath
         String jsonFile = "hangzhou_subway.json";
         org.springframework.core.io.Resource resource = new org.springframework.core.io.ClassPathResource(jsonFile);
@@ -152,25 +151,6 @@ public class DataInitializer implements CommandLineRunner {
             
         } catch (Exception e) {
             log.error("Data initialization failed", e);
-        }
-    }
-
-    private void checkAndUpgradeDatabase() {
-        try {
-            log.info("Checking if database upgrade is needed...");
-            // Check if 'lng' column exists in 'station' table
-            Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'station' AND column_name = 'lng'", 
-                Integer.class
-            );
-            if (count == null || count == 0) {
-                log.info("Column 'lng' not found in 'station' table. Upgrading database...");
-                jdbcTemplate.execute("ALTER TABLE station ADD COLUMN lng DOUBLE");
-                jdbcTemplate.execute("ALTER TABLE station ADD COLUMN lat DOUBLE");
-                log.info("Database upgraded successfully.");
-            }
-        } catch (Exception e) {
-            log.error("Failed to check/upgrade database: {}", e.getMessage());
         }
     }
 }
