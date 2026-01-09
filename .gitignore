@@ -6,6 +6,7 @@ dist/
 # IntelliJ IDEA
 .idea/*
 !.idea/runConfigurations/
+!.idea/encodings.xml
 !.idea/vcs.xml
 !.idea/modules.xml
 !.idea/misc.xml
