@@ -10,7 +10,7 @@ dist/
 !.idea/modules.xml
 !.idea/misc.xml
 !.idea/encodings.xml
-!.idea/subway-ticket-system.iml
+!subway-ticket-system.iml
 *.iml
 !kiosk/kiosk.iml
 !mobile/mobile.iml
