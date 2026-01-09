@@ -3,17 +3,18 @@ node_modules/
 dist/
 *.log
 .DS_Store
-
 # IntelliJ IDEA
-.idea/
+.idea/*
 !.idea/runConfigurations/
+!.idea/vcs.xml
+!.idea/modules.xml
+!.idea/misc.xml
+!.idea/encodings.xml
+!.idea/subway-ticket-system.iml
 *.iml
+!kiosk/kiosk.iml
+!mobile/mobile.iml
 
 # VS Code
 .vscode/
 
-# Local/Temp Files
-RMP_*.json
-RMP_*.png
-subway-ticket-system.txt
-.trae/
