@@ -62,6 +62,7 @@ function formatTime(isoStr) {
   height: 70vh; /* Taller than payment modal */
   border-radius: 16px 16px 0 0;
   display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
   animation: slideUp 0.3s ease-out;
 }
 

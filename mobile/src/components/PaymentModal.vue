@@ -82,6 +82,7 @@ function handlePay() {
   width: 100%;
   border-radius: 16px 16px 0 0;
   padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
   animation: slideUp 0.3s ease-out;
 }
 

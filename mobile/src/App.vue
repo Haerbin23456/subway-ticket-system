@@ -159,5 +159,11 @@ async function onCalculate() {
 <style>
 /* Reset & Base */
 body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; overflow: hidden; }
-.app-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+.app-container { 
+  position: relative; 
+  width: 100vw; 
+  height: 100vh; 
+  height: 100dvh; 
+  overflow: hidden; 
+}
 </style>

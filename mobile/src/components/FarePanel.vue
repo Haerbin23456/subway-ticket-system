@@ -127,11 +127,11 @@ import RouteTimeline from './RouteTimeline.vue'
 /* .btn-block moved to base.css */
 .floating-panel {
   position: absolute;
-  bottom: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
-  width: 90%;
-  max-width: 400px;
+  width: calc(100% - 40px);
+  max-width: 450px;
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px); /* Safari support */
