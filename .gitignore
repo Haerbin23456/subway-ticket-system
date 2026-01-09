@@ -4,7 +4,7 @@ dist/
 *.log
 .DS_Store
 # IntelliJ IDEA
-.idea/
+.idea/*
 !.idea/runConfigurations/
 !.idea/vcs.xml
 !.idea/modules.xml
