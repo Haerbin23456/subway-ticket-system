@@ -3,20 +3,13 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
 # IntelliJ IDEA
-.idea/*
-!.idea/runConfigurations/
-!.idea/vcs.xml
-!.idea/modules.xml
-!.idea/misc.xml
-!.idea/encodings.xml
-!subway-ticket-system.iml
+.idea/
 *.iml
-!kiosk/kiosk.iml
-!mobile/mobile.iml
-!backend/backend.iml
 
 # VS Code
 .vscode/
+.trae/
 
 out/
